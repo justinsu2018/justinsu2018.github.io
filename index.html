@@ -3,15 +3,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>888</title>
+  <title>888</title>  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     select, table, button { margin-top: 10px; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
-    .pagination { margin-top: 20px; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; word-break: break-word; }
+    .top-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 20px; gap: 10px; }
+    .pagination { margin-top: 20px; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; justify-content: center; }
     .pagination button { padding: 5px 10px; }
+    .pagination button.active { background-color: #007BFF; color: white; border: none; border-radius: 4px; }
+
+    @media (max-width: 600px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      th { display: none; }
+      td {
+        position: relative;
+        padding-left: 50%;
+        text-align: left;
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+      }
+      td::before {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        font-weight: bold;
+      }
+      td:nth-of-type(1)::before { content: "序號"; }
+      td:nth-of-type(2)::before { content: "中獎金額"; }
+      td:nth-of-type(3)::before { content: "中獎張數"; }
+      td:nth-of-type(4)::before { content: "中獎率"; }
+      td:nth-of-type(5)::before { content: "操作"; }
+    }
   </style>
 </head>
 <body>
