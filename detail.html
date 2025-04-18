@@ -15,7 +15,8 @@
   </style>
 </head>
 <body>
-  <button onclick="window.location.href='index.html'">返回列表頁</button>
+    <button onclick="const returnUrl = new URLSearchParams(window.location.search).get('price');
+      window.location.href = returnUrl ? `index.html?price=${returnUrl}` : 'index.html'">返回列表頁</button>
 
   <label for="name">刮刮樂名稱</label>
   <input type="text" id="name" maxlength="20" placeholder="請輸入名稱">
