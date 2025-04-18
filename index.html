@@ -1,0 +1,101 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>888紀錄表</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    select, table, button { margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div>
+      <label for="filterPrice">單價：</label>
+      <select id="filterPrice">
+        <option value="">請選擇</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+        <option value="500">500</option>
+        <option value="1000">1000</option>
+        <option value="2000">2000</option>
+      </select>
+    </div>
+    <button onclick="createRecord()">新增紀錄</button>
+  </div>
+
+  <table id="recordTable">
+    <thead>
+      <tr>
+        <th>序號</th>
+        <th>中獎金額</th>
+        <th>中獎張數</th>
+        <th>中獎率</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const filter = document.getElementById('filterPrice');
+    const tbody = document.querySelector('#recordTable tbody');
+
+    filter.addEventListener('change', () => {
+      const selected = filter.value;
+      tbody.innerHTML = '';
+      if (!selected) return;
+
+      const data = JSON.parse(localStorage.getItem('inputData') || '{}');
+      if (data.price !== selected) return;
+
+      const count = data.values.filter(v => v.trim()).length;
+      const total = ["100","200"].includes(selected) ? 100 : ["500","1000"].includes(selected) ? 50 : 18;
+      const amount = count * parseInt(selected);
+      const rate = total > 0 ? (count / total * 100).toFixed(2) + '%' : '0%';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${data.serial}</td>
+        <td>${amount}</td>
+        <td>${count}</td>
+        <td>${rate}</td>
+        <td>
+          <button onclick="viewDetail('${data.serial}')">詳情</button>
+          <button onclick="deleteRecord('${data.serial}')">刪除</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    function viewDetail(serial) {
+      window.location.href = `detail.html?serial=${serial}`;
+    }
+
+    function createRecord() {
+      const selected = filter.value;
+      if (selected) {
+        window.location.href = `detail.html?price=${selected}`;
+      } else {
+        window.location.href = 'detail.html';
+      }
+    }
+
+    function deleteRecord(serial) {
+      const confirmDelete = confirm('確定要刪除這筆紀錄嗎？');
+      if (!confirmDelete) return;
+
+      const data = JSON.parse(localStorage.getItem('inputData') || '{}');
+      if (data.serial === serial) {
+        localStorage.removeItem('inputData');
+        alert('紀錄已刪除');
+        filter.dispatchEvent(new Event('change'));
+      }
+    }
+  </script>
+</body>
+</html>

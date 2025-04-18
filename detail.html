@@ -1,0 +1,117 @@
+<!-- detail.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>888資料</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input[type="text"], select { width: 100%; padding: 8px; margin-top: 4px; }
+    .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 10px; margin-top: 20px; }
+    .cell input { width: 100%; padding: 5px; text-align: center; }
+    .buttons { margin-top: 20px; }
+    button { padding: 10px 20px; margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <button onclick="window.location.href='index.html'">返回列表頁</button>
+
+  <label for="name">刮刮樂名稱</label>
+  <input type="text" id="name" maxlength="20" placeholder="請輸入名稱">
+
+  <label for="serial">序號</label>
+  <input type="text" id="serial" maxlength="20" placeholder="請輸入序號">
+
+  <label for="price">單價</label>
+  <select id="price">
+    <option value="">請選擇</option>
+    <option value="100">100</option>
+    <option value="200">200</option>
+    <option value="500">500</option>
+    <option value="1000">1000</option>
+    <option value="2000">2000</option>
+  </select>
+
+  <div class="grid" id="inputGrid"></div>
+
+  <div class="buttons">
+    <button onclick="saveData()">儲存</button>
+    <button onclick="exportCSV()">匯出 CSV</button>
+  </div>
+
+  <script>
+    const priceSelect = document.getElementById('price');
+    const inputGrid = document.getElementById('inputGrid');
+    const params = new URLSearchParams(window.location.search);
+    const serialParam = params.get('serial');
+    const priceParam = params.get('price');
+
+    const nameInput = document.getElementById('name');
+    const serialInput = document.getElementById('serial');
+
+    if (serialParam) {
+      const data = JSON.parse(localStorage.getItem('inputData') || '{}');
+      if (data.serial === serialParam) {
+        nameInput.value = data.name;
+        serialInput.value = data.serial;
+        priceSelect.value = data.price;
+        renderInputs(data.price, data.values);
+      }
+    } else if (priceParam) {
+      priceSelect.value = priceParam;
+      renderInputs(priceParam);
+    }
+
+    priceSelect.addEventListener('change', () => {
+      renderInputs(priceSelect.value);
+    });
+
+    function renderInputs(price, values = []) {
+      inputGrid.innerHTML = '';
+      let count = ["100","200"].includes(price) ? 100 : ["500","1000"].includes(price) ? 50 : price === "2000" ? 18 : 0;
+      for (let i = 0; i < count; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = `input${i+1}`;
+        input.placeholder = i + 1;
+        input.value = values[i] || '';
+        cell.appendChild(input);
+        inputGrid.appendChild(cell);
+      }
+    }
+
+    function saveData() {
+      const name = nameInput.value;
+      const serial = serialInput.value;
+      const price = priceSelect.value;
+      const inputs = inputGrid.querySelectorAll('input');
+      const values = Array.from(inputs).map(i => i.value);
+
+      const data = { name, serial, price, values };
+      localStorage.setItem('inputData', JSON.stringify(data));
+      alert('已儲存到 localStorage！');
+    }
+
+    function exportCSV() {
+      const data = JSON.parse(localStorage.getItem('inputData') || '{}');
+      if (!data.name) return alert("請先儲存資料！");
+
+      let csv = `名稱,${data.name}\n序號,${data.serial}\n單價,${data.price}\n輸入格內容\n`;
+      data.values.forEach((v, i) => {
+        csv += `#${i+1},${v}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${data.name || 'export'}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
