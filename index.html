@@ -42,7 +42,14 @@
   </table>
 
   <script>
-     const filter = document.getElementById('filterPrice');
+
+    const filter = document.getElementById('filterPrice');
+    const urlParams = new URLSearchParams(window.location.search);
+    const priceFromURL = urlParams.get('price');
+    if (priceFromURL) {
+      filter.value = priceFromURL;
+      filter.dispatchEvent(new Event('change'));
+    }
     const tbody = document.querySelector('#recordTable tbody');
 
     filter.addEventListener('change', () => {
