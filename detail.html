@@ -47,20 +47,26 @@
     const params = new URLSearchParams(window.location.search);
     const serialParam = params.get('serial');
     const priceParam = params.get('price');
+    const backBtn = document.getElementById('backBtn');
 
     const nameInput = document.getElementById('name');
     const serialInput = document.getElementById('serial');
 
+    let existingRecord = null;
+
+    if (priceParam) priceSelect.value = priceParam;
+
+    const allData = JSON.parse(localStorage.getItem('inputDataList') || '[]');
+
     if (serialParam) {
-      const data = JSON.parse(localStorage.getItem('inputData') || '{}');
-      if (data.serial === serialParam) {
-        nameInput.value = data.name;
-        serialInput.value = data.serial;
-        priceSelect.value = data.price;
-        renderInputs(data.price, data.values);
+      existingRecord = allData.find(r => r.serial === serialParam);
+      if (existingRecord) {
+        nameInput.value = existingRecord.name;
+        serialInput.value = existingRecord.serial;
+        priceSelect.value = existingRecord.price;
+        renderInputs(existingRecord.price, existingRecord.values);
       }
     } else if (priceParam) {
-      priceSelect.value = priceParam;
       renderInputs(priceParam);
     }
 
@@ -85,20 +91,36 @@
     }
 
     function saveData() {
-      const name = nameInput.value;
-      const serial = serialInput.value;
+      const name = nameInput.value.trim();
+      const serial = serialInput.value.trim();
       const price = priceSelect.value;
       const inputs = inputGrid.querySelectorAll('input');
       const values = Array.from(inputs).map(i => i.value);
 
-      const data = { name, serial, price, values };
-      localStorage.setItem('inputData', JSON.stringify(data));
-      alert('儲存成功.');
+      if (!serial || !price) {
+        alert("序號與單價為必填！");
+        return;
+      }
+
+      let dataList = JSON.parse(localStorage.getItem('inputDataList') || '[]');
+      const index = dataList.findIndex(d => d.serial === serial);
+      const newData = { name, serial, price, values };
+
+      if (index !== -1) {
+        dataList[index] = newData;
+      } else {
+        dataList.push(newData);
+      }
+
+      localStorage.setItem('inputDataList', JSON.stringify(dataList));
+      alert('資料已儲存！');
     }
 
     function exportCSV() {
-      const data = JSON.parse(localStorage.getItem('inputData') || '{}');
-      if (!data.name) return alert("請先儲存資料！");
+      const serial = serialInput.value.trim();
+      const dataList = JSON.parse(localStorage.getItem('inputDataList') || '[]');
+      const data = dataList.find(d => d.serial === serial);
+      if (!data) return alert("找不到此序號的資料");
 
       let csv = `名稱,${data.name}\n序號,${data.serial}\n單價,${data.price}\n輸入格內容\n`;
       data.values.forEach((v, i) => {
@@ -108,11 +130,17 @@
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `${data.name || 'export'}.csv`;
+      link.download = `${data.serial}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     }
+
+    backBtn.onclick = () => {
+      const backPrice = priceSelect.value;
+      const url = backPrice ? `index.html?price=${backPrice}` : 'index.html';
+      window.location.href = url;
+    };
   </script>
 </body>
 </html>
