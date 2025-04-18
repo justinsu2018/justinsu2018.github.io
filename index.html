@@ -10,12 +10,14 @@
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
     .top-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+    .pagination { margin-top: 20px; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+    .pagination button { padding: 5px 10px; }
   </style>
 </head>
 <body>
   <div class="top-bar">
     <div>
-      <label for="filterPrice">單價：</label>
+      <label for="filterPrice">選擇單價：</label>
       <select id="filterPrice">
         <option value="">請選擇</option>
         <option value="100">100</option>
@@ -23,6 +25,14 @@
         <option value="500">500</option>
         <option value="1000">1000</option>
         <option value="2000">2000</option>
+      </select>
+      <label for="pageSize">每頁筆數：</label>
+      <select id="pageSize">
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="20">20</option>
+        <option value="30">30</option>
+        <option value="50">50</option>
       </select>
     </div>
     <button onclick="createRecord()">新增紀錄</button>
@@ -41,47 +51,98 @@
     <tbody></tbody>
   </table>
 
+  <div class="pagination" id="pagination"></div>
+
   <script>
     const filter = document.getElementById('filterPrice');
+    const pageSizeSelect = document.getElementById('pageSize');
     const urlParams = new URLSearchParams(window.location.search);
     const priceFromURL = urlParams.get('price');
+    const tbody = document.querySelector('#recordTable tbody');
+    const pagination = document.getElementById('pagination');
+    let currentPage = 1;
+
     if (priceFromURL) {
       filter.value = priceFromURL;
     }
-    // always trigger update on load
-    filter.dispatchEvent(new Event('change'));
-    const tbody = document.querySelector('#recordTable tbody');
 
     filter.addEventListener('change', () => {
-      const selected = filter.value;
-      tbody.innerHTML = '';
-      if (!selected) return;
-
-      const data = JSON.parse(localStorage.getItem('inputData') || '{}');
-      if (data.price !== selected) return;
-
-      const total = ["100","200"].includes(selected) ? 100 : ["500","1000"].includes(selected) ? 50 : 18;
-      const winningValues = data.values.filter(v => parseFloat(v) > 0);
-      const count = winningValues.length;
-      const amount = winningValues.reduce((sum, val) => sum + parseFloat(val || 0), 0);
-      const rate = total > 0 ? (count / total * 100).toFixed(2) + '%' : '0%';
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${data.serial}</td>
-        <td>${amount}</td>
-        <td>${count}</td>
-        <td>${rate}</td>
-        <td>
-          <button onclick="viewDetail('${data.serial}')">詳情</button>
-          <button onclick="deleteRecord('${data.serial}')">刪除</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+      currentPage = 1;
+      renderTable();
     });
 
+    pageSizeSelect.addEventListener('change', () => {
+      currentPage = 1;
+      renderTable();
+    });
+
+    function renderTable() {
+      const selected = filter.value;
+      tbody.innerHTML = '';
+      pagination.innerHTML = '';
+      if (!selected) return;
+
+      const rawData = JSON.parse(localStorage.getItem('inputDataList') || '[]');
+      const data = rawData.filter(item => item.price === selected);
+      const pageSize = parseInt(pageSizeSelect.value);
+      const totalPages = Math.ceil(data.length / pageSize);
+
+      const start = (currentPage - 1) * pageSize;
+      const paginated = data.slice(start, start + pageSize);
+
+      for (const item of paginated) {
+        const total = ["100","200"].includes(item.price) ? 100 : ["500","1000"].includes(item.price) ? 50 : 18;
+        const winningValues = item.values.filter(v => parseFloat(v) > 0);
+        const count = winningValues.length;
+        const amount = winningValues.reduce((sum, val) => sum + parseFloat(val || 0), 0);
+        const rate = total > 0 ? (count / total * 100).toFixed(2) + '%' : '0%';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.serial}</td>
+          <td>${amount}</td>
+          <td>${count}</td>
+          <td>${rate}</td>
+          <td>
+            <button onclick="viewDetail('${item.serial}')">詳情</button>
+            <button onclick="deleteRecord('${item.serial}')">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+      if (totalPages <= 1) return;
+
+      const groupSize = 5;
+      const groupStart = Math.floor((currentPage - 1) / groupSize) * groupSize + 1;
+      const groupEnd = Math.min(groupStart + groupSize - 1, totalPages);
+
+      const first = document.createElement('button');
+      first.textContent = '頁首';
+      first.onclick = () => { currentPage = 1; renderTable(); };
+      pagination.appendChild(first);
+
+      for (let i = groupStart; i <= groupEnd; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.disabled = i === currentPage;
+        btn.onclick = () => { currentPage = i; renderTable(); };
+        pagination.appendChild(btn);
+      }
+
+      const last = document.createElement('button');
+      last.textContent = '頁尾';
+      last.onclick = () => { currentPage = totalPages; renderTable(); };
+      pagination.appendChild(last);
+    }
+
     function viewDetail(serial) {
-      window.location.href = `detail.html?serial=${serial}`;
+      const selected = filter.value;
+      window.location.href = `detail.html?serial=${serial}&price=${selected}`;
     }
 
     function createRecord() {
@@ -97,13 +158,13 @@
       const confirmDelete = confirm('確定要刪除這筆紀錄嗎？');
       if (!confirmDelete) return;
 
-      const data = JSON.parse(localStorage.getItem('inputData') || '{}');
-      if (data.serial === serial) {
-        localStorage.removeItem('inputData');
-        alert('紀錄已刪除');
-        filter.dispatchEvent(new Event('change'));
-      }
+      let data = JSON.parse(localStorage.getItem('inputDataList') || '[]');
+      data = data.filter(item => item.serial !== serial);
+      localStorage.setItem('inputDataList', JSON.stringify(data));
+      renderTable();
     }
+
+    renderTable();
   </script>
 </body>
 </html>
