@@ -79,20 +79,14 @@
 
   <div class="pagination" id="pagination"></div>
 
-  <script>
-    const filter = document.getElementById('filterPrice');
+<script>
+    const filterPrice = document.getElementById('filterPrice');
     const pageSizeSelect = document.getElementById('pageSize');
-    const urlParams = new URLSearchParams(window.location.search);
-    const priceFromURL = urlParams.get('price');
     const tbody = document.querySelector('#recordTable tbody');
     const pagination = document.getElementById('pagination');
     let currentPage = 1;
 
-    if (priceFromURL) {
-      filter.value = priceFromURL;
-    }
-
-    filter.addEventListener('change', () => {
+    filterPrice.addEventListener('change', () => {
       currentPage = 1;
       renderTable();
     });
@@ -102,20 +96,20 @@
       renderTable();
     });
 
-    function renderTable() {
-      const selected = filter.value;
-      tbody.innerHTML = '';
-      pagination.innerHTML = '';
-      if (!selected) return;
+    function getFilteredData() {
+      const allData = JSON.parse(localStorage.getItem('inputDataList') || '[]');
+      const selected = filterPrice.value;
+      return selected ? allData.filter(item => item.price === selected) : [];
+    }
 
-      const rawData = JSON.parse(localStorage.getItem('inputDataList') || '[]');
-      const data = rawData.filter(item => item.price === selected);
+    function renderTable() {
+      const data = getFilteredData();
       const pageSize = parseInt(pageSizeSelect.value);
       const totalPages = Math.ceil(data.length / pageSize);
-
       const start = (currentPage - 1) * pageSize;
       const paginated = data.slice(start, start + pageSize);
 
+      tbody.innerHTML = '';
       for (const item of paginated) {
         const total = ["100","200"].includes(item.price) ? 100 : ["500","1000"].includes(item.price) ? 50 : 18;
         const winningValues = item.values.filter(v => parseFloat(v) > 0);
@@ -141,6 +135,7 @@
     }
 
     function renderPagination(totalPages) {
+      pagination.innerHTML = '';
       if (totalPages <= 1) return;
 
       const groupSize = 5;
@@ -155,7 +150,7 @@
       for (let i = groupStart; i <= groupEnd; i++) {
         const btn = document.createElement('button');
         btn.textContent = i;
-        btn.disabled = i === currentPage;
+        if (i === currentPage) btn.classList.add('active');
         btn.onclick = () => { currentPage = i; renderTable(); };
         pagination.appendChild(btn);
       }
@@ -167,26 +162,27 @@
     }
 
     function viewDetail(serial) {
-      const selected = filter.value;
+      const selected = filterPrice.value;
       window.location.href = `detail.html?serial=${serial}&price=${selected}`;
     }
 
     function createRecord() {
-      const selected = filter.value;
-      if (selected) {
-        window.location.href = `detail.html?price=${selected}`;
-      } else {
-        window.location.href = 'detail.html';
-      }
+      const selected = filterPrice.value;
+      window.location.href = selected ? `detail.html?price=${selected}` : 'detail.html';
     }
 
     function deleteRecord(serial) {
-      const confirmDelete = confirm('確定要刪除這筆紀錄嗎？');
-      if (!confirmDelete) return;
+      if (!confirm("確定要刪除這筆紀錄嗎？")) return;
+      let dataList = JSON.parse(localStorage.getItem('inputDataList') || '[]');
+      dataList = dataList.filter(item => item.serial !== serial);
+      localStorage.setItem('inputDataList', JSON.stringify(dataList));
 
-      let data = JSON.parse(localStorage.getItem('inputDataList') || '[]');
-      data = data.filter(item => item.serial !== serial);
-      localStorage.setItem('inputDataList', JSON.stringify(data));
+      // 若刪除後頁面無資料，往前翻一頁
+      const filtered = getFilteredData();
+      const pageSize = parseInt(pageSizeSelect.value);
+      const totalPages = Math.ceil(filtered.length / pageSize);
+      if (currentPage > totalPages) currentPage = totalPages;
+
       renderTable();
     }
 
