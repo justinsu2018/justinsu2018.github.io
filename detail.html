@@ -68,7 +68,15 @@
     <button onclick="saveData()">儲存</button>
     <button onclick="exportCSV()">匯出 CSV</button>
   </div>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3V68L9FXMQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
 
+  gtag('config', 'G-3V68L9FXMQ');
+</script>
   <script>
     const priceSelect = document.getElementById('price');
     const inputGrid = document.getElementById('inputGrid');
