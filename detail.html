@@ -1,166 +1,206 @@
-<!-- detail.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
+
 <head>
-  <meta charset="UTF-8">
-  <title>888資料</title><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>明細頁</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    input[type="text"], select { width: 100%; padding: 8px; margin-top: 4px; }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      padding: 12px;
+    }
+
+    h2 {
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 6px;
+      font-size: 12px;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(10, 1fr);
       gap: 10px;
-      margin-top: 20px;
+      margin-top: 10px;
     }
+
     .cell input {
       width: 100%;
       padding: 5px;
       text-align: center;
     }
+
     .buttons {
-      margin-top: 20px;
-    }
-    button {
-      padding: 10px 20px;
-      margin-right: 10px;
+      margin-top: 16px;
     }
 
-    /* ✅ RWD 手機支援 */
+    .buttons button {
+      padding: 8px 12px;
+      font-size: 12px;
+      margin-right: 6px;
+    }
+
+    .combo-container select {
+      max-width: 220px;
+    }
+
     @media (max-width: 600px) {
-      input[type="text"], select {
+      body {
+        font-size: 14px;
+        padding: 16px;
+      }
+
+      h2 {
         font-size: 16px;
       }
+
+      input[type="text"],
+      select {
+        font-size: 14px;
+        padding: 10px;
+      }
+
       .grid {
         grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
       }
-      button {
+
+      .buttons button {
+        font-size: 14px;
         width: 100%;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
       }
     }
   </style>
 </head>
+
 <body>
-    <button onclick="const returnUrl = new URLSearchParams(window.location.search).get('price');
-      window.location.href = returnUrl ? `index.html?price=${returnUrl}` : 'index.html'">返回列表頁</button>
 
-  <label for="name">刮刮樂名稱</label>
-  <input type="text" id="name" maxlength="20" placeholder="請輸入名稱">
+  <h2>明細頁</h2>
 
-  <label for="serial">序號</label>
-  <input type="text" id="serial" maxlength="20" placeholder="請輸入序號">
+  <div class="combo-container" id="comboContainer"></div>
 
-  <label for="price">單價</label>
-  <select id="price">
-    <option value="">請選擇</option>
-    <option value="100">100</option>
-    <option value="200">200</option>
-    <option value="500">500</option>
-    <option value="1000">1000</option>
-    <option value="2000">2000</option>
-  </select>
+  <label for="serialInput">序號（最多 20 字）</label>
+  <input type="text" id="serialInput" maxlength="20" placeholder="請輸入序號" />
 
   <div class="grid" id="inputGrid"></div>
 
   <div class="buttons">
     <button onclick="saveData()">儲存</button>
     <button onclick="exportCSV()">匯出 CSV</button>
+    <button onclick="goBack()">返回列表頁</button>
   </div>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-3V68L9FXMQ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
 
-  gtag('config', 'G-3V68L9FXMQ');
-</script>
+  <script src="./component/lotteryFilterComponent.js"></script>
   <script>
-    const priceSelect = document.getElementById('price');
     const inputGrid = document.getElementById('inputGrid');
-    const params = new URLSearchParams(window.location.search);
-    const serialParam = params.get('serial');
-    const priceParam = params.get('price');
-    const backBtn = document.getElementById('backBtn');
-
-    const nameInput = document.getElementById('name');
-    const serialInput = document.getElementById('serial');
-
+    const serialInput = document.getElementById('serialInput');
+    const urlParams = new URLSearchParams(window.location.search);
+    const serialParam = urlParams.get('serial');
+    const priceParam = urlParams.get('price');
+    const nameParam = urlParams.get('name');
     let existingRecord = null;
+    let initialState = null;
 
-    if (priceParam) priceSelect.value = priceParam;
+    createComboSelector('comboContainer', 'combo', () => {
+      const comboSelect = document.getElementById('combo');
 
-    const allData = JSON.parse(localStorage.getItem('inputDataList') || '[]');
-
-    if (serialParam) {
-      existingRecord = allData.find(r => r.serial === serialParam);
-      if (existingRecord) {
-        nameInput.value = existingRecord.name;
-        serialInput.value = existingRecord.serial;
-        priceSelect.value = existingRecord.price;
-        renderInputs(existingRecord.price, existingRecord.values);
+      // 選取預設 combo 值（若由列表頁帶入）
+      if (priceParam && nameParam) {
+        comboSelect.value = `${priceParam}|||${nameParam}`;
       }
-    } else if (priceParam) {
-      renderInputs(priceParam);
-    }
 
-    priceSelect.addEventListener('change', () => {
-      renderInputs(priceSelect.value);
+      const dataList = JSON.parse(localStorage.getItem('inputDataList') || '[]');
+
+      if (serialParam) {
+        existingRecord = dataList.find(r => r.serial === serialParam);
+        if (existingRecord) {
+          serialInput.value = existingRecord.serial;
+          comboSelect.value = `${existingRecord.price}|||${existingRecord.name}`;
+          renderInputs(existingRecord.price, existingRecord.name, existingRecord.values);
+        }
+      } else if (comboSelect.value.includes('|||')) {
+        const [price, name] = comboSelect.value.split('|||');
+        renderInputs(price, name);
+      }
+
+      comboSelect.addEventListener('change', () => {
+        const [price, name] = comboSelect.value.split('|||');
+        renderInputs(price, name);
+      });
     });
 
-    function renderInputs(price, values = []) {
+    function renderInputs(price, name, values = []) {
       inputGrid.innerHTML = '';
-      let count = ["100","200"].includes(price) ? 100 : ["500","1000"].includes(price) ? 50 : price === "2000" ? 18 : 0;
+      let count = values.length;
+      if (!count) {
+        const settings = JSON.parse(localStorage.getItem('lotterySettingsList') || '[]');
+        const setting = settings.find(s => s.unitPrice == price && s.name === name);
+        count = setting ? setting.bookCount : 0;
+      }
+
       for (let i = 0; i < count; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
         const input = document.createElement('input');
         input.type = 'text';
-        input.name = `input${i+1}`;
-        input.placeholder = i + 1;
+        input.name = `input${i + 1}`;
+        input.placeholder = `${i + 1}`;
         input.value = values[i] || '';
         cell.appendChild(input);
         inputGrid.appendChild(cell);
       }
+
+      // 儲存初始狀態
+      initialState = {
+        serial: serialInput.value.trim(),
+        combo: document.getElementById('combo').value,
+        values: Array.from(inputGrid.querySelectorAll('input')).map(i => i.value)
+      };
     }
 
     function saveData() {
-      const name = nameInput.value.trim();
       const serial = serialInput.value.trim();
-      const price = priceSelect.value;
+      const combo = document.getElementById('combo').value;
+      if (!combo || !serial) return alert("請輸入完整資料");
+
+      const [price, name] = combo.split('|||');
       const inputs = inputGrid.querySelectorAll('input');
       const values = Array.from(inputs).map(i => i.value);
 
-      if (!serial || !price) {
-        alert("序號與單價為必填！");
-        return;
-      }
-
-      let dataList = JSON.parse(localStorage.getItem('inputDataList') || '[]');
+      const dataList = JSON.parse(localStorage.getItem('inputDataList') || '[]');
       const index = dataList.findIndex(d => d.serial === serial);
-      const newData = { name, serial, price, values };
+      const newData = { serial, name, price, values };
 
-      if (index !== -1) {
-        dataList[index] = newData;
-      } else {
-        dataList.push(newData);
-      }
+      if (index !== -1) dataList[index] = newData;
+      else dataList.push(newData);
 
       localStorage.setItem('inputDataList', JSON.stringify(dataList));
-      alert('資料已儲存！');
+      alert("已儲存！");
     }
 
     function exportCSV() {
       const serial = serialInput.value.trim();
       const dataList = JSON.parse(localStorage.getItem('inputDataList') || '[]');
       const data = dataList.find(d => d.serial === serial);
-      if (!data) return alert("找不到此序號的資料");
+      if (!data) return alert("找不到資料");
 
-      let csv = `名稱,${data.name}\n序號,${data.serial}\n單價,${data.price}\n輸入格內容\n`;
+      let csv = `名稱,${data.name}\n序號,${data.serial}\n單價,${data.price}\n內容\n`;
       data.values.forEach((v, i) => {
-        csv += `#${i+1},${v}\n`;
+        csv += `#${i + 1},${v}\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -172,11 +212,32 @@
       document.body.removeChild(link);
     }
 
-    backBtn.onclick = () => {
-      const backPrice = priceSelect.value;
-      const url = backPrice ? `index.html?price=${backPrice}` : 'index.html';
+    function goBack() {
+      const combo = document.getElementById('combo').value;
+      const current = {
+        serial: serialInput.value.trim(),
+        combo: combo,
+        values: Array.from(inputGrid.querySelectorAll('input')).map(i => i.value)
+      };
+
+      const changed =
+        !initialState ||
+        current.serial !== initialState.serial ||
+        current.combo !== initialState.combo ||
+        current.values.join(',') !== initialState.values.join(',');
+
+      if (changed) {
+        const confirmLeave = confirm("您有未儲存的變更，是否儲存後再返回？");
+        if (confirmLeave) saveData();
+      }
+
+      const [price, name] = combo.includes('|||') ? combo.split('|||') : [null, null];
+      const url = price && name
+        ? `index.html?price=${encodeURIComponent(price)}&name=${encodeURIComponent(name)}`
+        : 'index.html';
       window.location.href = url;
-    };
+    }
   </script>
 </body>
+
 </html>
